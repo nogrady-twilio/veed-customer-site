@@ -5,8 +5,20 @@ class VeedAnalytics {
     constructor() {
         this.userId = this.getUserId();
         this.sessionId = this.generateSessionId();
-        this.anonymousId = analytics.user().anonymousId();
-        this.initializeTracking();
+        this.anonymousId = null;
+        
+        // Initialize tracking when Segment is ready
+        if (typeof analytics !== 'undefined') {
+            analytics.ready(() => {
+                this.anonymousId = analytics.user().anonymousId();
+                this.initializeTracking();
+                console.log('📊 Segment Analytics initialized with anonymous ID:', this.anonymousId);
+            });
+        } else {
+            // Fallback if analytics not available
+            this.anonymousId = 'anon_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            this.initializeTracking();
+        }
     }
 
     // Generate or retrieve persistent user ID (random 5-character string)
@@ -76,10 +88,19 @@ class VeedAnalytics {
             page_category: 'landing_page',
             user_journey_stage: this.getUserJourneyStage(),
             ab_test_variant: this.getABTestVariant(),
-            feature_flags: this.getActiveFeatureFlags()
+            feature_flags: this.getActiveFeatureFlags(),
+            // User context if available
+            user_id: this.userId || null,
+            is_authenticated: !!localStorage.getItem('veed_user_id')
         };
 
         analytics.page('Homepage', pageProperties);
+        
+        console.log('📄 Page view tracked:', {
+            user_id: this.userId || 'anonymous',
+            session_id: this.sessionId,
+            page: window.location.pathname
+        });
     }
 
     // Track user session start
@@ -105,8 +126,16 @@ class VeedAnalytics {
 
     // User signup tracking with comprehensive B2B properties
     trackSignup(userData) {
+        // Store the anonymous ID before signup for tracking continuity
+        const previousAnonymousId = this.anonymousId;
+        
+        // Generate the 5-character user ID that will be used as the identify userId
+        const generatedUserId = userData.userId || this.generateRandomUserId();
+        
+        const utmParams = this.generateUTMParameters();
+        
         const signupProperties = {
-            user_id: userData.email,
+            user_id: generatedUserId,
             email: userData.email,
             name: userData.name,
             company: userData.company || null,
@@ -118,11 +147,11 @@ class VeedAnalytics {
             onboarding_version: 'v2.1',
             feature_discovery_source: 'homepage_hero',
             session_id: this.sessionId,
-            anonymous_id_before_signup: this.anonymousId,
+            anonymous_id_before_signup: previousAnonymousId,
             time_to_signup: this.getTimeToSignup(),
             page_views_before_signup: this.getPageViewsBeforeSignup(),
             // UTM attribution
-            ...this.generateUTMParameters(),
+            ...utmParams,
             // B2B SaaS metrics
             company_size: this.estimateCompanySize(userData.company),
             industry: this.estimateIndustry(userData.email),
@@ -131,45 +160,156 @@ class VeedAnalytics {
             form_abandonment_step: null
         };
 
-        analytics.identify(userData.email, {
+        // IDENTIFY CALL: Link anonymous user to known user per Segment documentation
+        // This call associates the current anonymous user with the new user ID
+        // The 5-character ID becomes the user's permanent identifier
+        analytics.identify(generatedUserId, {
+            // User identity fields
             name: userData.name,
             email: userData.email,
-            company: userData.company,
-            created_at: new Date().toISOString(),
+            username: generatedUserId,
+            
+            // Account information
+            company: userData.company || null,
             plan: 'free',
             account_status: 'active',
+            created_at: new Date().toISOString(),
+            signup_date: new Date().toISOString(),
+            
+            // Onboarding and engagement
             onboarding_completed: false,
             feature_adoption_score: 0,
             engagement_score: 0.1,
-            churn_risk_score: 0.0
+            churn_risk_score: 0.0,
+            
+            // Business classification
+            account_type: userData.company ? 'business' : 'individual',
+            signup_method: 'email',
+            
+            // Attribution data
+            utm_source: utmParams.utm_source,
+            utm_medium: utmParams.utm_medium,
+            utm_campaign: utmParams.utm_campaign,
+            utm_content: utmParams.utm_content,
+            utm_term: utmParams.utm_term,
+            
+            // Technical context
+            device_type: this.getDeviceType(),
+            browser: this.getBrowser(),
+            operating_system: this.getOperatingSystem(),
+            
+            // Session tracking
+            previous_anonymous_id: previousAnonymousId,
+            signup_session_id: this.sessionId
         });
 
+        // Track the account creation event
         analytics.track('Account Created', signupProperties);
 
+        // Track user registration event for additional funnel analysis
+        analytics.track('User Registered', {
+            user_id: generatedUserId,
+            email: userData.email,
+            registration_method: 'email_form',
+            anonymous_id_before_signup: previousAnonymousId,
+            session_id: this.sessionId,
+            signup_timestamp: new Date().toISOString()
+        });
+
         // Update user ID for persistent tracking
-        this.userId = userData.email;
-        localStorage.setItem('veed_user_id', userData.email);
-        localStorage.setItem('veed_user_data', JSON.stringify(userData));
+        this.userId = generatedUserId;
+        localStorage.setItem('veed_user_id', generatedUserId);
+        localStorage.setItem('veed_user_email', userData.email);
+        localStorage.setItem('veed_user_data', JSON.stringify({
+            ...userData,
+            userId: generatedUserId
+        }));
+
+        console.log('🎯 Segment identify call tracking complete:');
+        console.log('   👤 Identify call: anonymous user linked to', generatedUserId);
+        console.log('   📊 Track call: Account Created event fired');
+        console.log('   📊 Track call: User Registered event fired');
+        console.log('   📧 Email:', userData.email);
+        console.log('   🏢 Company:', userData.company || 'Individual account');
+        console.log('   🔗 Previous anonymous ID:', previousAnonymousId);
     }
 
     // User login tracking
-    trackLogin(email) {
+    trackLogin(email, existingUserId = null) {
+        // Get the stored user ID - should exist for returning users
+        const storedUserId = localStorage.getItem('veed_user_id') || existingUserId;
+        const userId = storedUserId || this.generateRandomUserId();
+        
+        // Get stored user data if available
+        const storedUserData = JSON.parse(localStorage.getItem('veed_user_data') || '{}');
+        const currentPlan = localStorage.getItem('user_plan') || 'free';
+        const loginCount = this.getLoginCount() + 1;
+        
         const loginProperties = {
-            user_id: email,
+            user_id: userId,
+            email: email,
             login_method: 'email',
             session_id: this.sessionId,
             login_timestamp: new Date().toISOString(),
             days_since_last_login: this.getDaysSinceLastLogin(email),
             login_streak: this.getLoginStreak(email),
-            device_fingerprint: this.getDeviceFingerprint()
+            device_fingerprint: this.getDeviceFingerprint(),
+            returning_user: !!storedUserId,
+            login_count: loginCount
         };
 
-        analytics.identify(email);
+        // IDENTIFY CALL: Re-identify the user and update their profile
+        // This ensures the current session is associated with the known user
+        analytics.identify(userId, {
+            // Core identity
+            name: storedUserData.name || email.split('@')[0],
+            email: email,
+            username: userId,
+            
+            // Account status
+            plan: currentPlan,
+            account_status: 'active',
+            
+            // Login tracking
+            last_login: new Date().toISOString(),
+            login_count: loginCount,
+            total_sessions: this.getPreviousSessionCount() + 1,
+            
+            // User profile data
+            company: storedUserData.company || null,
+            created_at: storedUserData.signupDate || storedUserData.created_at,
+            
+            // Engagement metrics
+            days_since_signup: this.getDaysSinceSignup(),
+            days_since_last_login: this.getDaysSinceLastLogin(email),
+            login_streak: this.getLoginStreak(email),
+            
+            // Technical context
+            device_type: this.getDeviceType(),
+            browser: this.getBrowser(),
+            operating_system: this.getOperatingSystem(),
+            
+            // Session data
+            current_session_id: this.sessionId,
+            device_fingerprint: this.getDeviceFingerprint()
+        });
+
+        // Track the login event
         analytics.track('User Logged In', loginProperties);
 
-        this.userId = email;
-        localStorage.setItem('veed_user_id', email);
+        // Update stored user information
+        this.userId = userId;
+        localStorage.setItem('veed_user_id', userId);
+        localStorage.setItem('veed_user_email', email);
         localStorage.setItem('last_login_date', new Date().toISOString());
+        localStorage.setItem('login_count', loginCount.toString());
+
+        console.log('🎯 Segment login identify call complete:');
+        console.log('   👤 Identify call: user', userId, 're-identified');
+        console.log('   📊 Track call: User Logged In event fired');
+        console.log('   📧 Email:', email);
+        console.log('   🔄 Login count:', loginCount);
+        console.log('   📅 Days since signup:', this.getDaysSinceSignup());
     }
 
     // Feature usage tracking
@@ -495,6 +635,7 @@ class VeedAnalytics {
     estimateJobTitle() { return ['Manager', 'Director', 'VP', 'C-Level', 'Individual Contributor'][Math.floor(Math.random() * 5)]; }
     getDaysSinceLastLogin() { return Math.floor(Math.random() * 7); }
     getLoginStreak() { return Math.floor(Math.random() * 30); }
+    getLoginCount() { return parseInt(localStorage.getItem('login_count') || '0'); }
     getDeviceFingerprint() { return 'fp_' + Math.random().toString(36).substr(2, 16); }
     getFeatureCategory(feature) { 
         const categories = { 'subtitles': 'ai_tools', 'screen-record': 'recording', 'collaboration': 'team_features' };

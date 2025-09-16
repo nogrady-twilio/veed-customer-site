@@ -65,32 +65,78 @@ This project serves as a demonstration platform for Segment CDP integration, sho
 ### Core Tracking Setup
 - **Write Key**: `DSMSthizSy4oDemV7v977Qo7tYrAkd1M`
 - **SDK Version**: Latest Segment Analytics.js
-- **Persistent User ID**: Random 5-character alphanumeric IDs (e.g., "A7X9K")
+- **User Identification**: 5-character alphanumeric user IDs (e.g., "A7X9K") used as Segment userId
+- **Anonymous Linking**: Proper identify calls link anonymous behavior to registered users
 - **UTM Attribution**: Automatic UTM parameter generation and tracking
+
+### 🔗 Anonymous to Identified User Flow
+
+The application properly implements Segment's identify specification to link anonymous users to known users:
+
+#### **Flow Sequence:**
+1. **Anonymous Browsing**: User visits site → Segment auto-generates anonymous ID
+2. **Account Creation**: User signs up → `analytics.identify('A7X9K', {...})` links anonymous behavior
+3. **Continued Tracking**: All future events use the 5-character user ID
+4. **Return Visits**: Login triggers re-identification to maintain profile accuracy
+
+#### **Key Implementation Details:**
+- **No Alias Calls**: Uses identify calls only, per Segment best practices
+- **5-Character User IDs**: Consistent, readable user identifiers (e.g., "A7X9K", "B2Y8L")
+- **Profile Merging**: Anonymous behavior automatically attributed to registered user
+- **Session Continuity**: Seamless tracking across anonymous and authenticated states
 
 ### 🎯 B2B SaaS Event Tracking
 
 #### User Lifecycle Events
 ```javascript
-// Account Creation
+// STEP 1: Anonymous user browses site
+analytics.page('Homepage', {
+  session_id: 'session_123',
+  user_journey_stage: 'anonymous',
+  utm_source: 'google'
+});
+
+// STEP 2: User creates account - IDENTIFY call links anonymous to known user
+analytics.identify('A7X9K', {
+  name: 'John Doe',
+  email: 'user@example.com',
+  company: 'Acme Corp',
+  plan: 'free',
+  previous_anonymous_id: 'anonymous_456'
+});
+
+// STEP 3: Track account creation event
 analytics.track('Account Created', {
-  user_id: userData.email,
-  account_type: 'business|individual',
+  user_id: 'A7X9K',
+  email: 'user@example.com',
+  account_type: 'business',
   plan_type: 'free',
   signup_source: 'homepage',
-  company_size: '1-10|11-50|51-200|201-1000|1000+',
-  industry: 'Technology|Marketing|Education|Healthcare|Other',
+  company_size: '11-50',
+  industry: 'Technology',
+  anonymous_id_before_signup: 'anonymous_456',
   utm_source: 'google',
   utm_medium: 'cpc',
   utm_campaign: 'brand_awareness'
 });
 
-// User Login
+// STEP 4: User returns and logs in - RE-IDENTIFY user
+analytics.identify('A7X9K', {
+  name: 'John Doe',
+  email: 'user@example.com',
+  plan: 'pro',
+  last_login: '2024-01-16T09:15:00Z',
+  login_count: 5
+});
+
+// STEP 5: Track login event
 analytics.track('User Logged In', {
-  user_id: email,
+  user_id: 'A7X9K',
+  email: 'user@example.com',
   days_since_last_login: 2,
   login_streak: 5,
-  device_fingerprint: 'fp_abc123'
+  returning_user: true,
+  login_count: 5
 });
 ```
 
@@ -239,17 +285,49 @@ analytics.page('Homepage', {
 });
 ```
 
-#### User Identification
+#### User Identification (Linking Anonymous to Known Users)
 ```javascript
-analytics.identify('user@example.com', {
+// Account Creation: Links anonymous user to known user with 5-character ID
+analytics.identify('A7X9K', {
   name: 'John Doe',
   email: 'user@example.com',
+  username: 'A7X9K',
   company: 'Acme Corp',
-  plan: 'pro',
+  plan: 'free',
+  account_status: 'active',
   created_at: '2024-01-15T10:30:00Z',
-  monthly_recurring_revenue: 24,
-  feature_adoption_score: 0.75,
-  churn_risk_score: 0.2
+  signup_date: '2024-01-15T10:30:00Z',
+  signup_method: 'email',
+  account_type: 'business',
+  onboarding_completed: false,
+  feature_adoption_score: 0,
+  engagement_score: 0.1,
+  // Attribution
+  utm_source: 'google',
+  utm_campaign: 'brand_awareness',
+  // Technical context
+  device_type: 'desktop',
+  browser: 'Chrome',
+  // Session tracking
+  previous_anonymous_id: 'anonymous_123',
+  signup_session_id: 'session_456'
+});
+
+// Login: Re-identify existing user and update profile
+analytics.identify('A7X9K', {
+  name: 'John Doe',
+  email: 'user@example.com',
+  username: 'A7X9K',
+  plan: 'pro',
+  account_status: 'active',
+  last_login: '2024-01-16T09:15:00Z',
+  login_count: 5,
+  total_sessions: 12,
+  days_since_signup: 30,
+  days_since_last_login: 2,
+  login_streak: 5,
+  current_session_id: 'session_789',
+  device_fingerprint: 'fp_abc123'
 });
 ```
 

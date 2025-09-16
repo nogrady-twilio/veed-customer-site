@@ -168,21 +168,23 @@ class VeedApp {
         this.showLoading('Logging in...');
         
         setTimeout(() => {
-            // Generate or retrieve the 5-character user ID
-            const userId = window.veedAnalytics ? window.veedAnalytics.generateRandomUserId() : this.generateRandomUserId();
+            // Get existing user ID if user has logged in before, otherwise generate new one
+            const existingUserData = JSON.parse(localStorage.getItem('veed_user_data') || '{}');
+            const userId = existingUserData.userId || (window.veedAnalytics ? window.veedAnalytics.generateRandomUserId() : this.generateRandomUserId());
             
             this.currentUser = { 
                 email: email, 
-                name: email.split('@')[0],
+                name: existingUserData.name || email.split('@')[0],
                 loginDate: new Date().toISOString(),
-                userId: userId
+                userId: userId,
+                company: existingUserData.company || null
             };
             
             localStorage.setItem('veed_user_data', JSON.stringify(this.currentUser));
             
-            // Track login with Segment
+            // Track login with Segment - pass the userId
             if (window.veedAnalytics) {
-                window.veedAnalytics.trackLogin(email);
+                window.veedAnalytics.trackLogin(email, userId);
             }
 
             this.updateUIBasedOnAuth();
@@ -200,19 +202,22 @@ class VeedApp {
             // Generate a unique 5-character user ID
             const userId = window.veedAnalytics ? window.veedAnalytics.generateRandomUserId() : this.generateRandomUserId();
             
-            this.currentUser = {
+            // Add the generated user ID to the user data
+            const userDataWithId = {
                 ...userData,
                 signupDate: new Date().toISOString(),
                 plan: 'free',
                 userId: userId
             };
             
+            this.currentUser = userDataWithId;
+            
             localStorage.setItem('veed_user_data', JSON.stringify(this.currentUser));
             localStorage.setItem('user_plan', 'free');
             
-            // Track signup with Segment
+            // Track signup with Segment - pass the complete user data with ID
             if (window.veedAnalytics) {
-                window.veedAnalytics.trackSignup(userData);
+                window.veedAnalytics.trackSignup(userDataWithId);
             }
 
             this.updateUIBasedOnAuth();
@@ -626,6 +631,7 @@ class VeedApp {
             navActions.innerHTML = `
                 <div class="user-menu">
                     <span class="user-name">Hi, ${this.currentUser.name}!</span>
+                    <span class="user-id">ID: ${this.currentUser.userId}</span>
                     <span class="user-plan">${this.currentPlan}</span>
                     <button class="btn-secondary" onclick="app.logout()">Logout</button>
                 </div>
@@ -1123,6 +1129,15 @@ document.addEventListener('DOMContentLoaded', function() {
         .user-name {
             font-weight: 600;
             color: var(--gray-700);
+        }
+        
+        .user-id {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            background: var(--gray-100);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
         }
         
         .user-plan {
