@@ -77,16 +77,27 @@ This implementation follows **Segment best practices** exactly:
 ✅ **Top-level IDs**: `userId` and `anonymousId` are top-level fields, not in traits/properties  
 ✅ **Clean Traits**: Identify traits contain only user facts (name, email, plan, role, etc.)  
 ✅ **No UTM in Identify**: UTM parameters only in page/track calls, not identify  
-✅ **Proper Call Order**: page() → identify() → track() per session  
+✅ **Anonymous Users**: NO identify call until actual signup - anonymous ID only  
+✅ **Identify Timing**: First identify call ONLY during signup to link anonymous behavior  
 ✅ **Reset on Logout**: `analytics.reset()` clears user context  
 ✅ **B2B Event Names**: Past tense, concise names ("Signed Up", "Logged In")  
-✅ **5-Character User IDs**: Globally unique, immutable identifiers  
+✅ **5-Character User IDs**: Generated only during signup, not for anonymous users  
 
-#### **Flow Sequence:**
-1. **Page Load**: `analytics.page('VEED Homepage', {...})` - always first
-2. **Authentication**: `analytics.identify('A7X9K', {traits})` - when user known  
-3. **Key Events**: `analytics.track('Event Name', {properties})` - user actions
-4. **Logout**: `analytics.reset()` - clear session context
+#### **Correct Anonymous → Identified Flow:**
+
+**Anonymous User (First Visit):**
+1. `analytics.page('VEED Homepage', {...})` - page tracking with anonymous ID only
+2. `analytics.track('Feature Used', {...})` - behavior tracked with anonymous ID
+3. **NO identify call** - user remains anonymous until signup
+
+**User Signs Up (Critical Moment):**
+4. `analytics.identify('A7X9K', {traits})` - **FIRST identify call links anonymous behavior**
+5. `analytics.track('Signed Up', {...})` - signup event with new user ID
+
+**Authenticated User (Future Sessions):**
+6. `analytics.identify('A7X9K', {traits})` - re-identify on login to update traits
+7. `analytics.track('Feature Used', {...})` - events with user ID
+8. `analytics.reset()` - clear context on logout
 
 #### **Engagement Tracking (Optimized):**
 - **Scroll Depth**: Only tracks milestones once (25%, 50%, 75%, 100%) with 150ms debounce
@@ -103,25 +114,33 @@ This implementation follows **Segment best practices** exactly:
 
 #### B2B SaaS Event Tracking (Proper Format)
 ```javascript
-// Page tracking (on every load/route change)
+// ANONYMOUS USER - Page tracking only (no identify call)
 analytics.page('VEED Homepage', {
   url: 'https://veed.io',
   path: '/',
-  referrer: 'https://google.com',
+  referrer: 'https://google.com', 
   utm_source: 'google',
   utm_campaign: 'brand_awareness',
   userJourneyStage: 'anonymous',
   isAuthenticated: false
 });
 
-// Account creation flow
+// Anonymous behavior tracking (before signup)
+analytics.track('Feature Used', {
+  featureName: 'templates',
+  plan: 'anonymous',
+  isAnonymous: true
+});
+
+// SIGNUP MOMENT - First identify call links all previous anonymous events
 analytics.identify('A7X9K', {
   name: 'John Doe',
-  email: 'user@example.com', 
-  company: 'Acme Corp',
+  email: 'user@example.com',
+  company: 'Acme Corp', 
   plan: 'free',
   createdAt: '2024-01-15T10:30:00Z',
-  accountType: 'business'
+  accountType: 'business',
+  role: 'user'
 });
 
 analytics.track('Signed Up', {

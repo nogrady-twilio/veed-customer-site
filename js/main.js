@@ -169,9 +169,19 @@ class VeedApp {
         this.showLoading('Logging in...');
         
         setTimeout(() => {
-            // Get existing user ID if user has logged in before, otherwise generate new one
+            // Get existing user data - login should only work for users who signed up before
             const existingUserData = JSON.parse(localStorage.getItem('veed_user_data') || '{}');
-            const userId = existingUserData.userId || (window.veedAnalytics ? window.veedAnalytics.generateRandomUserId() : this.generateRandomUserId());
+            
+            if (!existingUserData.userId) {
+                // User doesn't exist - redirect to signup
+                this.hideLoading();
+                this.closeModal('login-modal');
+                this.showNotification('Account not found. Please sign up first.', 'error');
+                this.showSignupModal();
+                return;
+            }
+            
+            const userId = existingUserData.userId;
             
             this.currentUser = { 
                 email: email, 

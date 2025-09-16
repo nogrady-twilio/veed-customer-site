@@ -3,7 +3,7 @@
 
 class VeedAnalytics {
     constructor() {
-        this.userId = this.getUserId();
+        this.userId = this.getUserId(); // Will be null for anonymous users
         this.sessionId = this.generateSessionId();
         this.anonymousId = null;
         this.isInitialized = false;
@@ -24,14 +24,18 @@ class VeedAnalytics {
         }
     }
 
-    // Generate or retrieve persistent user ID (random 5-character string)
+    // Get existing user ID (only if user has signed up)
     getUserId() {
-        let userId = localStorage.getItem('veed_user_id');
-        if (!userId) {
-            userId = this.generateRandomUserId();
-            localStorage.setItem('veed_user_id', userId);
+        // Only return userId if user has actually signed up (has user data)
+        const userId = localStorage.getItem('veed_user_id');
+        const userData = localStorage.getItem('veed_user_data');
+        
+        if (userId && userData) {
+            return userId;
         }
-        return userId;
+        
+        // Return null for anonymous users - no user ID assigned yet
+        return null;
     }
 
     // Generate a random 5-character alphanumeric user ID
@@ -72,17 +76,23 @@ class VeedAnalytics {
         // STEP 1: Always call page() first
         this.trackPageView();
         
-        // STEP 2: If user is authenticated, identify them
+        // STEP 2: If user is authenticated (has stored user data), identify them
         const storedUserId = localStorage.getItem('veed_user_id');
-        if (storedUserId) {
+        const storedUserData = localStorage.getItem('veed_user_data');
+        
+        if (storedUserId && storedUserData) {
+            // Only identify if we have actual user data (means they signed up before)
             this.identifyExistingUser(storedUserId);
+        } else {
+            // Anonymous user - no identify call, just track as anonymous
+            console.log('👤 Anonymous user - no identify call');
         }
         
         // STEP 3: Setup event listeners
         this.setupEventListeners();
     }
     
-    // Re-identify existing authenticated user on page load
+    // Re-identify existing authenticated user on page load (returning user only)
     identifyExistingUser(userId) {
         const storedUserData = JSON.parse(localStorage.getItem('veed_user_data') || '{}');
         const currentPlan = localStorage.getItem('user_plan') || 'free';
@@ -98,7 +108,7 @@ class VeedAnalytics {
         });
         
         this.userId = userId;
-        console.log('👤 Existing user identified:', userId);
+        console.log('👤 Returning user identified:', userId);
     }
 
     // Page tracking following Segment best practices
@@ -131,7 +141,8 @@ class VeedAnalytics {
         
         console.log('📄 Page tracked:', {
             userId: this.userId || 'anonymous',
-            page: 'VEED Homepage'
+            page: 'VEED Homepage',
+            isAnonymous: !this.userId
         });
     }
 
@@ -156,13 +167,17 @@ class VeedAnalytics {
         analytics.track('Session Started', sessionProperties);
     }
 
-    // User signup tracking following Segment best practices
+    // User signup tracking - FIRST TIME identify call links anonymous to user
     trackSignup(userData) {
-        // Generate the 5-character user ID
-        const generatedUserId = userData.userId || this.generateRandomUserId();
+        // Generate the 5-character user ID (FIRST TIME)
+        const generatedUserId = this.generateRandomUserId();
         const signupTimestamp = new Date().toISOString();
         
-        // STEP 1: IDENTIFY the user with clean traits (user facts only)
+        console.log('🎯 Anonymous to Identified User Flow:');
+        console.log('   📝 Previous state: Anonymous user with ID', this.anonymousId);
+        console.log('   🆔 Generated user ID:', generatedUserId);
+        
+        // STEP 1: FIRST IDENTIFY CALL - Links all previous anonymous behavior to this user ID
         analytics.identify(generatedUserId, {
             name: userData.name,
             email: userData.email,
@@ -170,12 +185,12 @@ class VeedAnalytics {
             plan: 'free',
             createdAt: signupTimestamp,
             accountType: userData.company ? 'business' : 'individual',
-            marketingOptIn: true, // Assume opted in for demo
+            marketingOptIn: true,
             isTrial: false,
             role: 'user'
         });
 
-        // STEP 2: TRACK the signup event with properties (not traits)
+        // STEP 2: TRACK the signup event
         analytics.track('Signed Up', {
             plan: 'free',
             method: 'email',
@@ -185,7 +200,7 @@ class VeedAnalytics {
             industry: this.estimateIndustry(userData.email)
         });
 
-        // Update user ID for persistent tracking
+        // STEP 3: Update application state to reflect identified user
         this.userId = generatedUserId;
         localStorage.setItem('veed_user_id', generatedUserId);
         localStorage.setItem('veed_user_email', userData.email);
@@ -195,11 +210,8 @@ class VeedAnalytics {
             createdAt: signupTimestamp
         }));
 
-        console.log('🎯 Segment tracking - Signup:');
-        console.log('   👤 Identify call: user', generatedUserId);
-        console.log('   📊 Track call: Signed Up');
-        console.log('   📧 Email:', userData.email);
-        console.log('   🏢 Company:', userData.company || 'Individual');
+        console.log('   ✅ User now identified - all future events will use userId:', generatedUserId);
+        console.log('   📊 Previous anonymous events now attributed to user');
     }
 
     // User login tracking
@@ -250,19 +262,22 @@ class VeedAnalytics {
         console.log('   📅 Login count:', loginCount);
     }
 
-    // Feature usage tracking
+    // Feature usage tracking (works for both anonymous and identified users)
     trackFeatureUsage(featureName, properties = {}) {
         analytics.track('Feature Used', {
             featureName: featureName,
             featureCategory: this.getFeatureCategory(featureName),
-            plan: this.getUserPlan(),
+            plan: this.userId ? this.getUserPlan() : 'anonymous',
             featureAvailability: this.getFeatureAvailability(featureName),
             usageContext: properties.context || 'main_interface',
+            isAnonymous: !this.userId,
             ...properties
         });
         
-        // Update feature adoption tracking
-        this.updateFeatureAdoption(featureName);
+        // Update feature adoption tracking only for identified users
+        if (this.userId) {
+            this.updateFeatureAdoption(featureName);
+        }
     }
 
     // Project creation tracking
