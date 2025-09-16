@@ -190,7 +190,7 @@ class VeedAnalytics {
             role: 'user'
         });
 
-        // STEP 2: TRACK the signup event
+        // STEP 2: TRACK the signup event (user registration)
         analytics.track('Signed Up', {
             plan: 'free',
             method: 'email',
@@ -200,7 +200,20 @@ class VeedAnalytics {
             industry: this.estimateIndustry(userData.email)
         });
 
-        // STEP 3: Update application state to reflect identified user
+        // STEP 3: TRACK account creation event (account/organization creation)
+        analytics.track('Account Created', {
+            accountId: generatedUserId,
+            plan: 'free',
+            accountType: userData.company ? 'business' : 'individual',
+            source: 'homepage',
+            method: 'email',
+            companySize: this.estimateCompanySize(userData.company),
+            industry: this.estimateIndustry(userData.email),
+            trialEligible: true,
+            onboardingVersion: 'v2.1'
+        });
+
+        // STEP 4: Update application state to reflect identified user
         this.userId = generatedUserId;
         localStorage.setItem('veed_user_id', generatedUserId);
         localStorage.setItem('veed_user_email', userData.email);
@@ -210,8 +223,10 @@ class VeedAnalytics {
             createdAt: signupTimestamp
         }));
 
+        console.log('   📊 Track call: Signed Up');
+        console.log('   📊 Track call: Account Created');  
         console.log('   ✅ User now identified - all future events will use userId:', generatedUserId);
-        console.log('   📊 Previous anonymous events now attributed to user');
+        console.log('   🔗 Previous anonymous events now attributed to user');
     }
 
     // User login tracking

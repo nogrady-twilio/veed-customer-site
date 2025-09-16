@@ -413,17 +413,35 @@ class VeedApp {
         this.openEditor();
     }
 
-    openEditor() {
+    openEditor(existingProjectId = null) {
         const modal = document.getElementById('editor-modal');
         if (modal) {
             modal.style.display = 'block';
             
+            // Create new project if starting from scratch (no existing project)
+            if (!existingProjectId) {
+                const projectId = 'proj_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+                
+                // Track project creation
+                if (window.veedAnalytics) {
+                    window.veedAnalytics.trackProjectCreated({
+                        id: projectId,
+                        name: 'Untitled Project',
+                        type: 'video_editing',
+                        method: 'from_scratch'
+                    });
+                }
+                
+                // Update project count
+                this.projectCount++;
+                localStorage.setItem('total_projects', this.projectCount.toString());
+            }
+            
             // Track editor opened
             analytics.track('Editor Opened', {
-                user_id: this.currentUser?.email,
-                session_id: window.veedAnalytics?.sessionId,
-                user_plan: this.currentPlan,
-                projects_created: this.projectCount
+                plan: this.currentPlan,
+                projectsCreated: this.projectCount,
+                openMethod: existingProjectId ? 'existing_project' : 'new_project'
             });
         }
     }
@@ -971,20 +989,38 @@ function selectTemplate(templateId) {
         window.app?.showSignupModal();
         analytics.track('Signup Prompted', {
             trigger: 'template_selection',
-            template_id: templateId
+            templateId: templateId
         });
         return;
     }
 
-    // Simulate template usage
-    analytics.track('Template Usage Started', {
-        template_id: templateId,
-        user_id: window.app?.currentUser?.email,
-        user_plan: window.app?.currentPlan
+    // Create project from template
+    const projectId = 'proj_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+    
+    // Track project creation from template
+    if (window.veedAnalytics) {
+        window.veedAnalytics.trackProjectCreated({
+            id: projectId,
+            name: `${templateId} Project`,
+            type: 'video_editing',
+            template: templateId,
+            method: 'template'
+        });
+    }
+
+    // Track template usage started
+    analytics.track('Template Used', {
+        templateId: templateId,
+        projectId: projectId,
+        plan: window.app?.currentPlan
     });
 
     if (window.app) {
-        window.app.showNotification(`Loading ${templateId} template...`, 'success');
+        // Update project count
+        window.app.projectCount++;
+        localStorage.setItem('total_projects', window.app.projectCount.toString());
+        
+        window.app.showNotification(`Creating project from ${templateId} template...`, 'success');
         setTimeout(() => {
             window.app.startVideoEditor();
         }, 1000);

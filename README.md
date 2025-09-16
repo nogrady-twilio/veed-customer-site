@@ -92,12 +92,14 @@ This implementation follows **Segment best practices** exactly:
 
 **User Signs Up (Critical Moment):**
 4. `analytics.identify('A7X9K', {traits})` - **FIRST identify call links anonymous behavior**
-5. `analytics.track('Signed Up', {...})` - signup event with new user ID
+5. `analytics.track('Signed Up', {...})` - user registration event
+6. `analytics.track('Account Created', {...})` - account/organization creation event
 
 **Authenticated User (Future Sessions):**
-6. `analytics.identify('A7X9K', {traits})` - re-identify on login to update traits
-7. `analytics.track('Feature Used', {...})` - events with user ID
-8. `analytics.reset()` - clear context on logout
+7. `analytics.identify('A7X9K', {traits})` - re-identify on login to update traits
+8. `analytics.track('Project Created', {...})` - user creates content/projects
+9. `analytics.track('Feature Used', {...})` - feature usage events with user ID
+10. `analytics.reset()` - clear context on logout
 
 #### **Engagement Tracking (Optimized):**
 - **Scroll Depth**: Only tracks milestones once (25%, 50%, 75%, 100%) with 150ms debounce
@@ -152,6 +154,22 @@ analytics.track('Signed Up', {
   industry: 'Technology'
 });
 
+analytics.track('Account Created', {
+  accountId: 'A7X9K',
+  plan: 'free',
+  accountType: 'business',
+  source: 'homepage',
+  method: 'email',
+  companySize: '11-50',
+  industry: 'Technology',
+  trialEligible: true
+});
+
+// Note: Different event purposes:
+// - "Signed Up": User registration/signup funnel
+// - "Account Created": Account/organization creation for B2B analysis
+// - "Project Created": Content creation and user activation tracking
+
 // Login tracking  
 analytics.track('Logged In', {
   method: 'email',
@@ -182,10 +200,24 @@ analytics.track('Feature Used', {
 });
 
 analytics.track('Project Created', {
-  projectId: 'proj_123',
+  projectId: 'proj_abc123',
+  projectName: 'Instagram Story Project',
   projectType: 'video_editing',
   templateUsed: 'instagram-story',
-  plan: 'pro'
+  creationMethod: 'template',
+  plan: 'pro',
+  totalProjectsCreated: 3
+});
+
+// Alternative: Project from scratch
+analytics.track('Project Created', {
+  projectId: 'proj_def456',
+  projectName: 'Untitled Project',
+  projectType: 'video_editing',
+  templateUsed: null,
+  creationMethod: 'from_scratch',
+  plan: 'free',
+  totalProjectsCreated: 1
 });
 
 // Team collaboration
