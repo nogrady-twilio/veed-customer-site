@@ -69,75 +69,139 @@ This project serves as a demonstration platform for Segment CDP integration, sho
 - **Anonymous Linking**: Proper identify calls link anonymous behavior to registered users
 - **UTM Attribution**: Automatic UTM parameter generation and tracking
 
-### 🔗 Anonymous to Identified User Flow
+### 🎯 Corrected Segment Implementation
 
-The application properly implements Segment's identify specification to link anonymous users to known users:
+This implementation follows **Segment best practices** exactly:
+
+#### **Key Corrections Made:**
+✅ **Top-level IDs**: `userId` and `anonymousId` are top-level fields, not in traits/properties  
+✅ **Clean Traits**: Identify traits contain only user facts (name, email, plan, role, etc.)  
+✅ **No UTM in Identify**: UTM parameters only in page/track calls, not identify  
+✅ **Proper Call Order**: page() → identify() → track() per session  
+✅ **Reset on Logout**: `analytics.reset()` clears user context  
+✅ **B2B Event Names**: Past tense, concise names ("Signed Up", "Logged In")  
+✅ **5-Character User IDs**: Globally unique, immutable identifiers  
 
 #### **Flow Sequence:**
-1. **Anonymous Browsing**: User visits site → Segment auto-generates anonymous ID
-2. **Account Creation**: User signs up → `analytics.identify('A7X9K', {...})` links anonymous behavior
-3. **Continued Tracking**: All future events use the 5-character user ID
-4. **Return Visits**: Login triggers re-identification to maintain profile accuracy
+1. **Page Load**: `analytics.page('VEED Homepage', {...})` - always first
+2. **Authentication**: `analytics.identify('A7X9K', {traits})` - when user known  
+3. **Key Events**: `analytics.track('Event Name', {properties})` - user actions
+4. **Logout**: `analytics.reset()` - clear session context
 
-#### **Key Implementation Details:**
-- **No Alias Calls**: Uses identify calls only, per Segment best practices
-- **5-Character User IDs**: Consistent, readable user identifiers (e.g., "A7X9K", "B2Y8L")
-- **Profile Merging**: Anonymous behavior automatically attributed to registered user
-- **Session Continuity**: Seamless tracking across anonymous and authenticated states
+#### **Engagement Tracking (Optimized):**
+- **Scroll Depth**: Only tracks milestones once (25%, 50%, 75%, 100%) with 150ms debounce
+- **Time on Page**: Meaningful thresholds only (1min, 3min, 5min)
+- **Interactions**: High engagement tracked once per session at 5 interaction threshold
+
+#### **User ID System:**
+- **Format**: 5-character alphanumeric (A-Z, 0-9) e.g., "A7X9K", "B2Y8L"
+- **Persistence**: Immutable across all sessions and devices
+- **Usage**: Top-level `userId` parameter in all Segment calls
+- **Linking**: Automatic anonymous → identified user attribution
 
 ### 🎯 B2B SaaS Event Tracking
 
-#### User Lifecycle Events
+#### B2B SaaS Event Tracking (Proper Format)
 ```javascript
-// STEP 1: Anonymous user browses site
-analytics.page('Homepage', {
-  session_id: 'session_123',
-  user_journey_stage: 'anonymous',
-  utm_source: 'google'
+// Page tracking (on every load/route change)
+analytics.page('VEED Homepage', {
+  url: 'https://veed.io',
+  path: '/',
+  referrer: 'https://google.com',
+  utm_source: 'google',
+  utm_campaign: 'brand_awareness',
+  userJourneyStage: 'anonymous',
+  isAuthenticated: false
 });
 
-// STEP 2: User creates account - IDENTIFY call links anonymous to known user
+// Account creation flow
 analytics.identify('A7X9K', {
   name: 'John Doe',
-  email: 'user@example.com',
+  email: 'user@example.com', 
   company: 'Acme Corp',
   plan: 'free',
-  previous_anonymous_id: 'anonymous_456'
+  createdAt: '2024-01-15T10:30:00Z',
+  accountType: 'business'
 });
 
-// STEP 3: Track account creation event
-analytics.track('Account Created', {
-  user_id: 'A7X9K',
-  email: 'user@example.com',
-  account_type: 'business',
-  plan_type: 'free',
-  signup_source: 'homepage',
-  company_size: '11-50',
-  industry: 'Technology',
-  anonymous_id_before_signup: 'anonymous_456',
-  utm_source: 'google',
-  utm_medium: 'cpc',
-  utm_campaign: 'brand_awareness'
+analytics.track('Signed Up', {
+  plan: 'free',
+  method: 'email',
+  source: 'homepage',
+  accountType: 'business',
+  companySize: '11-50',
+  industry: 'Technology'
 });
 
-// STEP 4: User returns and logs in - RE-IDENTIFY user
-analytics.identify('A7X9K', {
-  name: 'John Doe',
-  email: 'user@example.com',
+// Login tracking  
+analytics.track('Logged In', {
+  method: 'email',
   plan: 'pro',
-  last_login: '2024-01-16T09:15:00Z',
-  login_count: 5
+  loginCount: 5,
+  daysSinceLastLogin: 2,
+  loginStreak: 5
 });
 
-// STEP 5: Track login event
-analytics.track('User Logged In', {
-  user_id: 'A7X9K',
-  email: 'user@example.com',
-  days_since_last_login: 2,
-  login_streak: 5,
-  returning_user: true,
-  login_count: 5
+// Subscription events
+analytics.track('Subscription Upgraded', {
+  previousPlan: 'free',
+  newPlan: 'pro', 
+  billingInterval: 'monthly',
+  mrr: 24,
+  arr: 288,
+  revenue: 24,
+  currency: 'USD',
+  method: 'credit_card',
+  trial: false
 });
+
+// Product usage
+analytics.track('Feature Used', {
+  featureName: 'subtitles',
+  featureCategory: 'ai_tools',
+  plan: 'pro'
+});
+
+analytics.track('Project Created', {
+  projectId: 'proj_123',
+  projectType: 'video_editing',
+  templateUsed: 'instagram-story',
+  plan: 'pro'
+});
+
+// Team collaboration
+analytics.track('Invite Sent', {
+  inviteId: 'inv_456',
+  inviteeEmail: 'colleague@acme.com',
+  inviteeRole: 'editor',
+  method: 'email',
+  plan: 'business'
+});
+
+// Engagement tracking (optimized frequency)
+analytics.track('Page Scrolled', {
+  depth: '50%',
+  page: 'VEED Homepage'
+}); // Only fired once per milestone
+
+analytics.track('Page Engaged', {
+  milestone: '3_minutes',
+  page: 'VEED Homepage', 
+  engagementLevel: 'medium'
+});
+
+analytics.track('High Engagement', {
+  engagementType: 'multiple_interactions',
+  interactionCount: 5,
+  page: 'VEED Homepage'
+}); // Only fired once per session
+
+// Logout
+analytics.track('Logged Out', {
+  sessionDuration: 1800000,
+  plan: 'pro'
+});
+analytics.reset(); // Clear user context
 ```
 
 #### Feature Usage & Engagement
@@ -285,49 +349,40 @@ analytics.page('Homepage', {
 });
 ```
 
-#### User Identification (Linking Anonymous to Known Users)
+#### Proper Segment Implementation
+
+**Call Order (per session):**
+1. `analytics.page()` - First on every page load
+2. `analytics.identify()` - When user is authenticated  
+3. `analytics.track()` - For key events
+4. `analytics.reset()` - On logout
+
+**User Identification (Clean Traits):**
 ```javascript
-// Account Creation: Links anonymous user to known user with 5-character ID
+// Signup: Link anonymous user to known user
 analytics.identify('A7X9K', {
   name: 'John Doe',
   email: 'user@example.com',
-  username: 'A7X9K',
   company: 'Acme Corp',
   plan: 'free',
-  account_status: 'active',
-  created_at: '2024-01-15T10:30:00Z',
-  signup_date: '2024-01-15T10:30:00Z',
-  signup_method: 'email',
-  account_type: 'business',
-  onboarding_completed: false,
-  feature_adoption_score: 0,
-  engagement_score: 0.1,
-  // Attribution
-  utm_source: 'google',
-  utm_campaign: 'brand_awareness',
-  // Technical context
-  device_type: 'desktop',
-  browser: 'Chrome',
-  // Session tracking
-  previous_anonymous_id: 'anonymous_123',
-  signup_session_id: 'session_456'
+  createdAt: '2024-01-15T10:30:00Z',
+  accountType: 'business',
+  marketingOptIn: true,
+  isTrial: false,
+  role: 'user'
 });
 
-// Login: Re-identify existing user and update profile
+// Login: Re-identify existing user
 analytics.identify('A7X9K', {
-  name: 'John Doe',
+  name: 'John Doe',  
   email: 'user@example.com',
-  username: 'A7X9K',
+  company: 'Acme Corp',
   plan: 'pro',
-  account_status: 'active',
-  last_login: '2024-01-16T09:15:00Z',
-  login_count: 5,
-  total_sessions: 12,
-  days_since_signup: 30,
-  days_since_last_login: 2,
-  login_streak: 5,
-  current_session_id: 'session_789',
-  device_fingerprint: 'fp_abc123'
+  createdAt: '2024-01-15T10:30:00Z',
+  lastLogin: '2024-01-16T09:15:00Z',
+  loginCount: 5,
+  role: 'user',
+  isTrial: false
 });
 ```
 

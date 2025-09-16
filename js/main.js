@@ -79,6 +79,7 @@ class VeedApp {
     setupEngagementTracking() {
         let engagementScore = 0;
         let interactionCount = 0;
+        let highEngagementTracked = false;
 
         // Track meaningful interactions
         document.addEventListener('click', (e) => {
@@ -86,17 +87,17 @@ class VeedApp {
                 interactionCount++;
                 engagementScore += 1;
 
-                // Track high engagement threshold
-                if (interactionCount === 5) {
+                // Track high engagement threshold only once
+                if (interactionCount === 5 && !highEngagementTracked) {
                     this.trackHighEngagement();
+                    highEngagementTracked = true;
                 }
             }
         });
 
-        // Track time on page milestones
-        setTimeout(() => this.trackTimeOnPage('30_seconds'), 30000);
-        setTimeout(() => this.trackTimeOnPage('60_seconds'), 60000);
-        setTimeout(() => this.trackTimeOnPage('2_minutes'), 120000);
+        // Track meaningful time-on-page milestones only
+        setTimeout(() => this.trackTimeOnPage('1_minute'), 60000);
+        setTimeout(() => this.trackTimeOnPage('3_minutes'), 180000);
         setTimeout(() => this.trackTimeOnPage('5_minutes'), 300000);
 
         // Track before leaving
@@ -640,19 +641,29 @@ class VeedApp {
     }
 
     logout() {
-        // Track logout
-        analytics.track('User Logged Out', {
-            user_id: this.currentUser?.email,
-            session_duration: Date.now() - this.sessionStartTime
+        // Track logout event before resetting
+        analytics.track('Logged Out', {
+            sessionDuration: Date.now() - this.sessionStartTime,
+            plan: this.currentPlan
         });
 
+        // Reset analytics to clear user context
+        analytics.reset();
+
+        // Clear application state
         this.currentUser = null;
         this.currentPlan = 'free';
         localStorage.removeItem('veed_user_data');
+        localStorage.removeItem('veed_user_id');
+        localStorage.removeItem('veed_user_email');
         localStorage.removeItem('user_plan');
         
         this.updateUIBasedOnAuth();
         this.showNotification('Logged out successfully', 'success');
+
+        console.log('🎯 Segment tracking - Logout:');
+        console.log('   📊 Track call: Logged Out');
+        console.log('   🔄 Analytics reset');
     }
 
     // Utility Methods
@@ -760,19 +771,18 @@ class VeedApp {
     }
 
     trackHighEngagement() {
-        analytics.track('High Engagement Detected', {
-            user_id: this.currentUser?.email,
-            session_id: window.veedAnalytics?.sessionId,
-            engagement_type: 'multiple_interactions',
-            threshold: 5
+        analytics.track('High Engagement', {
+            engagementType: 'multiple_interactions',
+            interactionCount: 5,
+            page: 'VEED Homepage'
         });
     }
 
     trackTimeOnPage(milestone) {
-        analytics.track('Time on Page Milestone', {
+        analytics.track('Page Engaged', {
             milestone: milestone,
-            user_id: this.currentUser?.email,
-            page: window.location.pathname
+            page: 'VEED Homepage',
+            engagementLevel: milestone === '5_minutes' ? 'high' : 'medium'
         });
     }
 
@@ -914,10 +924,9 @@ function closeEditor() {
 // New page-specific functions
 function filterTemplates(category) {
     // Track template filter usage
-    analytics.track('Template Filter Used', {
+    analytics.track('Template Filtered', {
         category: category,
-        user_id: window.app?.currentUser?.email,
-        page_section: 'templates'
+        pageSection: 'templates'
     });
 
     // Update active button
@@ -944,9 +953,8 @@ function filterTemplates(category) {
 function selectTemplate(templateId) {
     // Track template selection
     analytics.track('Template Selected', {
-        template_id: templateId,
-        user_id: window.app?.currentUser?.email,
-        selection_context: 'template_grid'
+        templateId: templateId,
+        selectionContext: 'template_grid'
     });
 
     if (!window.app?.currentUser) {

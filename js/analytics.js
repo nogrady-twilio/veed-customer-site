@@ -6,13 +6,16 @@ class VeedAnalytics {
         this.userId = this.getUserId();
         this.sessionId = this.generateSessionId();
         this.anonymousId = null;
+        this.isInitialized = false;
         
         // Initialize tracking when Segment is ready
         if (typeof analytics !== 'undefined') {
             analytics.ready(() => {
                 this.anonymousId = analytics.user().anonymousId();
                 this.initializeTracking();
-                console.log('📊 Segment Analytics initialized with anonymous ID:', this.anonymousId);
+                console.log('📊 Segment Analytics initialized');
+                console.log('   Anonymous ID:', this.anonymousId);
+                console.log('   User ID:', this.userId || 'none (anonymous)');
             });
         } else {
             // Fallback if analytics not available
@@ -62,44 +65,73 @@ class VeedAnalytics {
         };
     }
 
-    // Initialize tracking on page load
+    // Initialize tracking on page load - follow proper call order
     initializeTracking() {
+        this.isInitialized = true;
+        
+        // STEP 1: Always call page() first
         this.trackPageView();
-        this.trackUserSession();
+        
+        // STEP 2: If user is authenticated, identify them
+        const storedUserId = localStorage.getItem('veed_user_id');
+        if (storedUserId) {
+            this.identifyExistingUser(storedUserId);
+        }
+        
+        // STEP 3: Setup event listeners
         this.setupEventListeners();
     }
+    
+    // Re-identify existing authenticated user on page load
+    identifyExistingUser(userId) {
+        const storedUserData = JSON.parse(localStorage.getItem('veed_user_data') || '{}');
+        const currentPlan = localStorage.getItem('user_plan') || 'free';
+        
+        analytics.identify(userId, {
+            name: storedUserData.name,
+            email: storedUserData.email || localStorage.getItem('veed_user_email'),
+            company: storedUserData.company || null,
+            plan: currentPlan,
+            createdAt: storedUserData.createdAt || storedUserData.signupDate,
+            role: storedUserData.role || 'user',
+            isTrial: this.isTrialUser()
+        });
+        
+        this.userId = userId;
+        console.log('👤 Existing user identified:', userId);
+    }
 
-    // Enhanced page tracking with UTM parameters
+    // Page tracking following Segment best practices
     trackPageView() {
         const utmParams = this.generateUTMParameters();
+        
+        // Clean page properties (no user_id here - it's top-level)
         const pageProperties = {
+            // Page context
             url: window.location.href,
             path: window.location.pathname,
             referrer: document.referrer,
             title: document.title,
-            session_id: this.sessionId,
-            user_agent: navigator.userAgent,
-            screen_width: window.screen.width,
-            screen_height: window.screen.height,
-            viewport_width: window.innerWidth,
-            viewport_height: window.innerHeight,
+            
+            // UTM parameters (belong on page calls)
             ...utmParams,
-            // B2B SaaS specific properties
-            page_category: 'landing_page',
-            user_journey_stage: this.getUserJourneyStage(),
-            ab_test_variant: this.getABTestVariant(),
-            feature_flags: this.getActiveFeatureFlags(),
-            // User context if available
-            user_id: this.userId || null,
-            is_authenticated: !!localStorage.getItem('veed_user_id')
+            
+            // Technical context
+            userAgent: navigator.userAgent,
+            screenWidth: window.screen.width,
+            screenHeight: window.screen.height,
+            
+            // User journey context
+            userJourneyStage: this.getUserJourneyStage(),
+            isAuthenticated: !!localStorage.getItem('veed_user_id')
         };
 
-        analytics.page('Homepage', pageProperties);
+        // Call page with stable name, variables in properties
+        analytics.page('VEED Homepage', pageProperties);
         
-        console.log('📄 Page view tracked:', {
-            user_id: this.userId || 'anonymous',
-            session_id: this.sessionId,
-            page: window.location.pathname
+        console.log('📄 Page tracked:', {
+            userId: this.userId || 'anonymous',
+            page: 'VEED Homepage'
         });
     }
 
@@ -124,96 +156,33 @@ class VeedAnalytics {
         analytics.track('Session Started', sessionProperties);
     }
 
-    // User signup tracking with comprehensive B2B properties
+    // User signup tracking following Segment best practices
     trackSignup(userData) {
-        // Store the anonymous ID before signup for tracking continuity
-        const previousAnonymousId = this.anonymousId;
-        
-        // Generate the 5-character user ID that will be used as the identify userId
+        // Generate the 5-character user ID
         const generatedUserId = userData.userId || this.generateRandomUserId();
+        const signupTimestamp = new Date().toISOString();
         
-        const utmParams = this.generateUTMParameters();
-        
-        const signupProperties = {
-            user_id: generatedUserId,
-            email: userData.email,
-            name: userData.name,
-            company: userData.company || null,
-            signup_method: 'email',
-            signup_source: this.getSignupSource(),
-            account_type: userData.company ? 'business' : 'individual',
-            plan_type: 'free',
-            trial_start_date: new Date().toISOString(),
-            onboarding_version: 'v2.1',
-            feature_discovery_source: 'homepage_hero',
-            session_id: this.sessionId,
-            anonymous_id_before_signup: previousAnonymousId,
-            time_to_signup: this.getTimeToSignup(),
-            page_views_before_signup: this.getPageViewsBeforeSignup(),
-            // UTM attribution
-            ...utmParams,
-            // B2B SaaS metrics
-            company_size: this.estimateCompanySize(userData.company),
-            industry: this.estimateIndustry(userData.email),
-            job_title: this.estimateJobTitle(userData.name, userData.email),
-            signup_completion_rate: 1.0,
-            form_abandonment_step: null
-        };
-
-        // IDENTIFY CALL: Link anonymous user to known user per Segment documentation
-        // This call associates the current anonymous user with the new user ID
-        // The 5-character ID becomes the user's permanent identifier
+        // STEP 1: IDENTIFY the user with clean traits (user facts only)
         analytics.identify(generatedUserId, {
-            // User identity fields
             name: userData.name,
             email: userData.email,
-            username: generatedUserId,
-            
-            // Account information
             company: userData.company || null,
             plan: 'free',
-            account_status: 'active',
-            created_at: new Date().toISOString(),
-            signup_date: new Date().toISOString(),
-            
-            // Onboarding and engagement
-            onboarding_completed: false,
-            feature_adoption_score: 0,
-            engagement_score: 0.1,
-            churn_risk_score: 0.0,
-            
-            // Business classification
-            account_type: userData.company ? 'business' : 'individual',
-            signup_method: 'email',
-            
-            // Attribution data
-            utm_source: utmParams.utm_source,
-            utm_medium: utmParams.utm_medium,
-            utm_campaign: utmParams.utm_campaign,
-            utm_content: utmParams.utm_content,
-            utm_term: utmParams.utm_term,
-            
-            // Technical context
-            device_type: this.getDeviceType(),
-            browser: this.getBrowser(),
-            operating_system: this.getOperatingSystem(),
-            
-            // Session tracking
-            previous_anonymous_id: previousAnonymousId,
-            signup_session_id: this.sessionId
+            createdAt: signupTimestamp,
+            accountType: userData.company ? 'business' : 'individual',
+            marketingOptIn: true, // Assume opted in for demo
+            isTrial: false,
+            role: 'user'
         });
 
-        // Track the account creation event
-        analytics.track('Account Created', signupProperties);
-
-        // Track user registration event for additional funnel analysis
-        analytics.track('User Registered', {
-            user_id: generatedUserId,
-            email: userData.email,
-            registration_method: 'email_form',
-            anonymous_id_before_signup: previousAnonymousId,
-            session_id: this.sessionId,
-            signup_timestamp: new Date().toISOString()
+        // STEP 2: TRACK the signup event with properties (not traits)
+        analytics.track('Signed Up', {
+            plan: 'free',
+            method: 'email',
+            source: 'homepage',
+            accountType: userData.company ? 'business' : 'individual',
+            companySize: this.estimateCompanySize(userData.company),
+            industry: this.estimateIndustry(userData.email)
         });
 
         // Update user ID for persistent tracking
@@ -222,16 +191,15 @@ class VeedAnalytics {
         localStorage.setItem('veed_user_email', userData.email);
         localStorage.setItem('veed_user_data', JSON.stringify({
             ...userData,
-            userId: generatedUserId
+            userId: generatedUserId,
+            createdAt: signupTimestamp
         }));
 
-        console.log('🎯 Segment identify call tracking complete:');
-        console.log('   👤 Identify call: anonymous user linked to', generatedUserId);
-        console.log('   📊 Track call: Account Created event fired');
-        console.log('   📊 Track call: User Registered event fired');
+        console.log('🎯 Segment tracking - Signup:');
+        console.log('   👤 Identify call: user', generatedUserId);
+        console.log('   📊 Track call: Signed Up');
         console.log('   📧 Email:', userData.email);
-        console.log('   🏢 Company:', userData.company || 'Individual account');
-        console.log('   🔗 Previous anonymous ID:', previousAnonymousId);
+        console.log('   🏢 Company:', userData.company || 'Individual');
     }
 
     // User login tracking
@@ -244,92 +212,54 @@ class VeedAnalytics {
         const storedUserData = JSON.parse(localStorage.getItem('veed_user_data') || '{}');
         const currentPlan = localStorage.getItem('user_plan') || 'free';
         const loginCount = this.getLoginCount() + 1;
+        const loginTimestamp = new Date().toISOString();
         
-        const loginProperties = {
-            user_id: userId,
-            email: email,
-            login_method: 'email',
-            session_id: this.sessionId,
-            login_timestamp: new Date().toISOString(),
-            days_since_last_login: this.getDaysSinceLastLogin(email),
-            login_streak: this.getLoginStreak(email),
-            device_fingerprint: this.getDeviceFingerprint(),
-            returning_user: !!storedUserId,
-            login_count: loginCount
-        };
-
-        // IDENTIFY CALL: Re-identify the user and update their profile
-        // This ensures the current session is associated with the known user
+        // STEP 1: IDENTIFY the user with updated traits (user facts only)
         analytics.identify(userId, {
-            // Core identity
             name: storedUserData.name || email.split('@')[0],
             email: email,
-            username: userId,
-            
-            // Account status
-            plan: currentPlan,
-            account_status: 'active',
-            
-            // Login tracking
-            last_login: new Date().toISOString(),
-            login_count: loginCount,
-            total_sessions: this.getPreviousSessionCount() + 1,
-            
-            // User profile data
             company: storedUserData.company || null,
-            created_at: storedUserData.signupDate || storedUserData.created_at,
-            
-            // Engagement metrics
-            days_since_signup: this.getDaysSinceSignup(),
-            days_since_last_login: this.getDaysSinceLastLogin(email),
-            login_streak: this.getLoginStreak(email),
-            
-            // Technical context
-            device_type: this.getDeviceType(),
-            browser: this.getBrowser(),
-            operating_system: this.getOperatingSystem(),
-            
-            // Session data
-            current_session_id: this.sessionId,
-            device_fingerprint: this.getDeviceFingerprint()
+            plan: currentPlan,
+            createdAt: storedUserData.createdAt || storedUserData.signupDate,
+            lastLogin: loginTimestamp,
+            loginCount: loginCount,
+            role: storedUserData.role || 'user',
+            isTrial: currentPlan === 'free' ? false : this.isTrialUser()
         });
 
-        // Track the login event
-        analytics.track('User Logged In', loginProperties);
+        // STEP 2: TRACK the login event
+        analytics.track('Logged In', {
+            method: 'email',
+            plan: currentPlan,
+            loginCount: loginCount,
+            daysSinceLastLogin: this.getDaysSinceLastLogin(email),
+            loginStreak: this.getLoginStreak(email)
+        });
 
         // Update stored user information
         this.userId = userId;
         localStorage.setItem('veed_user_id', userId);
         localStorage.setItem('veed_user_email', email);
-        localStorage.setItem('last_login_date', new Date().toISOString());
+        localStorage.setItem('last_login_date', loginTimestamp);
         localStorage.setItem('login_count', loginCount.toString());
 
-        console.log('🎯 Segment login identify call complete:');
-        console.log('   👤 Identify call: user', userId, 're-identified');
-        console.log('   📊 Track call: User Logged In event fired');
+        console.log('🎯 Segment tracking - Login:');
+        console.log('   👤 Identify call: user', userId);
+        console.log('   📊 Track call: Logged In');
         console.log('   📧 Email:', email);
-        console.log('   🔄 Login count:', loginCount);
-        console.log('   📅 Days since signup:', this.getDaysSinceSignup());
+        console.log('   📅 Login count:', loginCount);
     }
 
     // Feature usage tracking
     trackFeatureUsage(featureName, properties = {}) {
-        const featureProperties = {
-            feature_name: featureName,
-            user_id: this.userId,
-            session_id: this.sessionId,
-            feature_category: this.getFeatureCategory(featureName),
-            usage_timestamp: new Date().toISOString(),
-            user_plan: this.getUserPlan(),
-            feature_availability: this.getFeatureAvailability(featureName),
-            is_power_user: this.isPowerUser(),
-            feature_adoption_day: this.getFeatureAdoptionDay(featureName),
-            usage_context: 'main_interface',
-            previous_feature_usage: this.getPreviousFeatureUsage(),
+        analytics.track('Feature Used', {
+            featureName: featureName,
+            featureCategory: this.getFeatureCategory(featureName),
+            plan: this.getUserPlan(),
+            featureAvailability: this.getFeatureAvailability(featureName),
+            usageContext: properties.context || 'main_interface',
             ...properties
-        };
-
-        analytics.track('Feature Used', featureProperties);
+        });
         
         // Update feature adoption tracking
         this.updateFeatureAdoption(featureName);
@@ -337,25 +267,16 @@ class VeedAnalytics {
 
     // Project creation tracking
     trackProjectCreated(projectData) {
-        const projectProperties = {
-            project_id: projectData.id || this.generateProjectId(),
-            project_name: projectData.name,
-            project_type: projectData.type || 'video_editing',
-            user_id: this.userId,
-            session_id: this.sessionId,
-            creation_timestamp: new Date().toISOString(),
-            template_used: projectData.template || null,
-            collaboration_enabled: false,
-            project_duration_estimate: projectData.duration || 0,
-            user_plan: this.getUserPlan(),
-            projects_created_today: this.getProjectsCreatedToday(),
-            total_projects_created: this.getTotalProjectsCreated(),
-            time_since_last_project: this.getTimeSinceLastProject(),
-            creation_method: projectData.method || 'manual',
-            initial_media_count: projectData.mediaCount || 0
-        };
-
-        analytics.track('Project Created', projectProperties);
+        analytics.track('Project Created', {
+            projectId: projectData.id || this.generateProjectId(),
+            projectName: projectData.name,
+            projectType: projectData.type || 'video_editing',
+            templateUsed: projectData.template || null,
+            creationMethod: projectData.method || 'manual',
+            plan: this.getUserPlan(),
+            projectsCreatedToday: this.getProjectsCreatedToday(),
+            totalProjectsCreated: this.getTotalProjectsCreated()
+        });
         
         // Track onboarding progress
         if (this.getTotalProjectsCreated() === 1) {
@@ -365,37 +286,33 @@ class VeedAnalytics {
 
     // Subscription upgrade tracking
     trackSubscriptionUpgrade(planData) {
-        const upgradeProperties = {
-            user_id: this.userId,
-            session_id: this.sessionId,
-            previous_plan: this.getUserPlan(),
-            new_plan: planData.plan,
-            upgrade_timestamp: new Date().toISOString(),
-            upgrade_method: planData.method || 'pricing_page',
-            billing_cycle: planData.billingCycle || 'monthly',
-            discount_applied: planData.discount || null,
-            upgrade_reason: planData.reason || 'feature_limitation',
-            trial_to_paid: planData.fromTrial || false,
-            days_since_signup: this.getDaysSinceSignup(),
-            feature_usage_before_upgrade: this.getFeatureUsageStats(),
-            conversion_funnel_step: 'payment_completed',
-            annual_contract_value: this.calculateACV(planData),
-            monthly_recurring_revenue: this.calculateMRR(planData),
-            customer_lifetime_value: this.estimateCLV(planData),
-            upgrade_trigger: this.getUpgradeTrigger(),
-            price_sensitivity: this.getPriceSensitivity()
-        };
-
+        const previousPlan = this.getUserPlan();
+        const mrr = this.calculateMRR(planData);
+        const upgradeTimestamp = new Date().toISOString();
+        
+        // Update user traits
         analytics.identify(this.userId, {
             plan: planData.plan,
-            billing_cycle: planData.billingCycle,
-            subscription_status: 'active',
-            upgrade_date: new Date().toISOString(),
-            monthly_recurring_revenue: upgradeProperties.monthly_recurring_revenue,
-            customer_lifetime_value: upgradeProperties.customer_lifetime_value
+            billingInterval: planData.billingCycle || 'monthly',
+            subscriptionStatus: 'active',
+            mrr: mrr,
+            isTrial: planData.fromTrial === true ? false : this.isTrialUser()
         });
 
-        analytics.track('Subscription Upgraded', upgradeProperties);
+        // Track subscription upgrade event
+        analytics.track('Subscription Upgraded', {
+            previousPlan: previousPlan,
+            newPlan: planData.plan,
+            billingInterval: planData.billingCycle || 'monthly',
+            mrr: mrr,
+            arr: mrr * 12,
+            revenue: mrr,
+            currency: 'USD',
+            method: planData.method || 'credit_card',
+            trial: planData.fromTrial || false,
+            upgradeReason: planData.reason || 'feature_limitation',
+            daysSinceSignup: this.getDaysSinceSignup()
+        });
 
         // Update local plan storage
         localStorage.setItem('user_plan', planData.plan);
@@ -403,24 +320,16 @@ class VeedAnalytics {
 
     // Team invitation tracking
     trackUserInvited(inviteData) {
-        const inviteProperties = {
-            inviter_id: this.userId,
-            invitee_email: inviteData.email,
-            invite_id: this.generateInviteId(),
-            session_id: this.sessionId,
-            invite_timestamp: new Date().toISOString(),
-            invite_method: 'email',
-            team_size_before: this.getTeamSize(),
-            invitee_role: inviteData.role || 'editor',
-            project_context: inviteData.projectId || null,
-            organization_plan: this.getUserPlan(),
-            invitation_message_included: !!inviteData.message,
-            viral_coefficient: this.calculateViralCoefficient(),
-            referral_program_active: false,
-            invite_channel: 'product_interface'
-        };
-
-        analytics.track('User Invited', inviteProperties);
+        analytics.track('Invite Sent', {
+            inviteId: this.generateInviteId(),
+            inviteeEmail: inviteData.email,
+            inviteeRole: inviteData.role || 'editor',
+            method: 'email',
+            teamSizeBefore: this.getTeamSize(),
+            projectId: inviteData.projectId || null,
+            plan: this.getUserPlan(),
+            messageIncluded: !!inviteData.message
+        });
 
         // Track viral growth metrics
         this.updateViralMetrics(inviteData);
@@ -450,28 +359,21 @@ class VeedAnalytics {
 
     // Video export tracking
     trackVideoExport(exportData) {
-        const exportProperties = {
-            user_id: this.userId,
-            project_id: exportData.projectId,
-            session_id: this.sessionId,
-            export_timestamp: new Date().toISOString(),
-            video_duration: exportData.duration,
-            export_quality: exportData.quality,
-            file_size_mb: exportData.fileSize,
-            export_format: exportData.format || 'mp4',
-            processing_time_seconds: exportData.processingTime,
-            user_plan: this.getUserPlan(),
-            export_count_today: this.getExportCountToday(),
-            total_exports: this.getTotalExports(),
-            watermark_present: this.hasWatermark(),
-            subtitle_enabled: exportData.hasSubtitles || false,
-            effects_used: exportData.effectsCount || 0,
-            collaboration_project: exportData.isCollaborative || false,
-            export_success: true,
-            bandwidth_usage_mb: exportData.fileSize
-        };
-
-        analytics.track('Video Exported', exportProperties);
+        analytics.track('Video Exported', {
+            projectId: exportData.projectId,
+            videoDuration: exportData.duration,
+            exportQuality: exportData.quality,
+            fileSizeMb: exportData.fileSize,
+            exportFormat: exportData.format || 'mp4',
+            processingTimeSeconds: exportData.processingTime,
+            plan: this.getUserPlan(),
+            exportCountToday: this.getExportCountToday(),
+            totalExports: this.getTotalExports(),
+            watermarkPresent: this.hasWatermark(),
+            subtitlesEnabled: exportData.hasSubtitles || false,
+            effectsUsed: exportData.effectsCount || 0,
+            collaborationProject: exportData.isCollaborative || false
+        });
         
         // Track plan usage limits
         this.updateUsageLimits('exports', 1);
@@ -513,20 +415,53 @@ class VeedAnalytics {
             this.trackSessionEnd();
         });
 
-        // Track scroll depth
+        // Track scroll depth milestones (only once per milestone)
         let maxScrollDepth = 0;
+        let scrollMilestones = {
+            '25%': false,
+            '50%': false,
+            '75%': false,
+            '100%': false
+        };
+        let scrollTimeout;
+        
         window.addEventListener('scroll', () => {
-            const scrollDepth = (window.scrollY + window.innerHeight) / document.body.scrollHeight;
-            if (scrollDepth > maxScrollDepth) {
-                maxScrollDepth = scrollDepth;
-                if (scrollDepth > 0.25 && scrollDepth <= 0.5) {
-                    analytics.track('Page Scroll', { depth: '25%' });
-                } else if (scrollDepth > 0.5 && scrollDepth <= 0.75) {
-                    analytics.track('Page Scroll', { depth: '50%' });
-                } else if (scrollDepth > 0.75) {
-                    analytics.track('Page Scroll', { depth: '75%' });
+            // Debounce scroll events to reduce frequency
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                const scrollDepth = (window.scrollY + window.innerHeight) / document.body.scrollHeight;
+                
+                if (scrollDepth > maxScrollDepth) {
+                    maxScrollDepth = scrollDepth;
+                    
+                    // Track each milestone only once
+                    if (scrollDepth >= 0.25 && !scrollMilestones['25%']) {
+                        scrollMilestones['25%'] = true;
+                        analytics.track('Page Scrolled', { 
+                            depth: '25%',
+                            page: 'VEED Homepage'
+                        });
+                    } else if (scrollDepth >= 0.50 && !scrollMilestones['50%']) {
+                        scrollMilestones['50%'] = true;
+                        analytics.track('Page Scrolled', { 
+                            depth: '50%',
+                            page: 'VEED Homepage'
+                        });
+                    } else if (scrollDepth >= 0.75 && !scrollMilestones['75%']) {
+                        scrollMilestones['75%'] = true;
+                        analytics.track('Page Scrolled', { 
+                            depth: '75%',
+                            page: 'VEED Homepage'
+                        });
+                    } else if (scrollDepth >= 0.95 && !scrollMilestones['100%']) {
+                        scrollMilestones['100%'] = true;
+                        analytics.track('Page Scrolled', { 
+                            depth: '100%',
+                            page: 'VEED Homepage'
+                        });
+                    }
                 }
-            }
+            }, 150); // 150ms debounce
         });
     }
 
@@ -637,6 +572,7 @@ class VeedAnalytics {
     getLoginStreak() { return Math.floor(Math.random() * 30); }
     getLoginCount() { return parseInt(localStorage.getItem('login_count') || '0'); }
     getDeviceFingerprint() { return 'fp_' + Math.random().toString(36).substr(2, 16); }
+    isTrialUser() { return Math.random() > 0.7; }
     getFeatureCategory(feature) { 
         const categories = { 'subtitles': 'ai_tools', 'screen-record': 'recording', 'collaboration': 'team_features' };
         return categories[feature] || 'editing_tools';
