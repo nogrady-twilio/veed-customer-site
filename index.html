@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VEED - Online Video Editor</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Segment Analytics -->
+    <script>
+      !function(){var analytics=window.analytics=window.analytics||[];if(!analytics.initialize)if(analytics.invoked)window.console&&console.error&&console.error("Segment snippet included twice.");else{analytics.invoked=!0;analytics.methods=["trackSubmit","trackClick","trackLink","trackForm","pageview","identify","reset","group","track","ready","alias","debug","page","once","off","on","addSourceMiddleware","addIntegrationMiddleware","setAnonymousId","addDestinationMiddleware"];analytics.factory=function(e){return function(){var t=Array.prototype.slice.call(arguments);t.unshift(e);analytics.push(t);return analytics}};for(var e=0;e<analytics.methods.length;e++){var key=analytics.methods[e];analytics[key]=analytics.factory(key)}analytics.load=function(key,e){var t=document.createElement("script");t.type="text/javascript";t.async=!0;t.src="https://cdn.segment.com/analytics.js/v1/" + key + "/analytics.min.js";var n=document.getElementsByTagName("script")[0];n.parentNode.insertBefore(t,n);analytics._loadOptions=e};analytics._writeKey="DSMSthizSy4oDemV7v977Qo7tYrAkd1M";;analytics.SNIPPET_VERSION="4.16.1";
+      analytics.load("DSMSthizSy4oDemV7v977Qo7tYrAkd1M");
+      }}();
+    </script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <nav class="navbar">
+            <div class="nav-container">
+                <div class="nav-logo">
+                    <img src="https://cdn.jsdelivr.net/gh/veedapp/assets@main/logo.svg" alt="VEED" class="logo">
+                </div>
+                <div class="nav-links">
+                    <a href="#templates" class="nav-link">Templates</a>
+                    <a href="#brand-kits" class="nav-link">Brand Kits</a>
+                    <a href="#team-space" class="nav-link">Team Space</a>
+                    <a href="#resources" class="nav-link">Resources</a>
+                    <a href="#features" class="nav-link">Features</a>
+                    <a href="#pricing" class="nav-link">Pricing</a>
+                </div>
+                <div class="nav-actions">
+                    <button class="btn-secondary" onclick="showLoginModal()">Log in</button>
+                    <button class="btn-primary" onclick="showSignupModal()">Sign up</button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <main class="main">
+        <section class="hero">
+            <div class="hero-container">
+                <div class="hero-content">
+                    <h1 class="hero-title">
+                        Create amazing videos<br>
+                        <span class="gradient-text">in seconds</span>
+                    </h1>
+                    <p class="hero-subtitle">
+                        Edit videos online for free with VEED's powerful video editor. 
+                        Add subtitles, music, and effects. No watermarks.
+                    </p>
+                    <div class="hero-actions">
+                        <button class="btn-hero" onclick="startVideoEditor()">
+                            <i class="fas fa-play"></i>
+                            Get started for free
+                        </button>
+                        <button class="btn-secondary-outline" onclick="uploadVideo()">
+                            <i class="fas fa-upload"></i>
+                            Upload a video
+                        </button>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="stat">
+                            <span class="stat-number">4.6★</span>
+                            <span class="stat-label">from 10,000+ reviews</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">2M+</span>
+                            <span class="stat-label">videos created</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-demo">
+                    <div class="video-preview">
+                        <div class="video-placeholder">
+                            <i class="fas fa-video"></i>
+                            <p>Video Editor Preview</p>
+                        </div>
+                        <div class="editor-controls">
+                            <button class="control-btn"><i class="fas fa-play"></i></button>
+                            <button class="control-btn"><i class="fas fa-pause"></i></button>
+                            <button class="control-btn"><i class="fas fa-stop"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Templates Section -->
+        <section id="templates" class="templates">
+            <div class="container">
+                <h2 class="section-title">Professional Video Templates</h2>
+                <p class="section-subtitle">Start with professionally designed templates and customize them for your brand</p>
+                <div class="template-categories">
+                    <button class="category-btn active" onclick="filterTemplates('all')">All Templates</button>
+                    <button class="category-btn" onclick="filterTemplates('social')">Social Media</button>
+                    <button class="category-btn" onclick="filterTemplates('marketing')">Marketing</button>
+                    <button class="category-btn" onclick="filterTemplates('education')">Education</button>
+                    <button class="category-btn" onclick="filterTemplates('business')">Business</button>
+                </div>
+                <div class="templates-grid">
+                    <div class="template-card" data-category="social" onclick="selectTemplate('instagram-story')">
+                        <div class="template-preview">
+                            <div class="template-placeholder">
+                                <i class="fab fa-instagram"></i>
+                                <span>Instagram Story</span>
+                            </div>
+                            <div class="template-overlay">
+                                <button class="use-template-btn">Use Template</button>
+                                <button class="preview-btn">Preview</button>
+                            </div>
+                        </div>
+                        <h3>Instagram Story Template</h3>
+                        <p>Engaging vertical video for social media</p>
+                        <div class="template-meta">
+                            <span class="template-duration">15s</span>
+                            <span class="template-plan">Free</span>
+                        </div>
+                    </div>
+                    
+                    <div class="template-card" data-category="marketing" onclick="selectTemplate('product-promo')">
+                        <div class="template-preview">
+                            <div class="template-placeholder">
+                                <i class="fas fa-bullhorn"></i>
+                                <span>Product Promo</span>
+                            </div>
+                            <div class="template-overlay">
+                                <button class="use-template-btn">Use Template</button>
+                                <button class="preview-btn">Preview</button>
+                            </div>
+                        </div>
+                        <h3>Product Promotion</h3>
+                        <p>Showcase your products with style</p>
+                        <div class="template-meta">
+                            <span class="template-duration">30s</span>
+                            <span class="template-plan pro">Pro</span>
+                        </div>
+                    </div>
+                    
+                    <div class="template-card" data-category="business" onclick="selectTemplate('company-intro')">
+                        <div class="template-preview">
+                            <div class="template-placeholder">
+                                <i class="fas fa-building"></i>
+                                <span>Company Intro</span>
+                            </div>
+                            <div class="template-overlay">
+                                <button class="use-template-btn">Use Template</button>
+                                <button class="preview-btn">Preview</button>
+                            </div>
+                        </div>
+                        <h3>Company Introduction</h3>
+                        <p>Professional company overview video</p>
+                        <div class="template-meta">
+                            <span class="template-duration">60s</span>
+                            <span class="template-plan business">Business</span>
+                        </div>
+                    </div>
+                    
+                    <div class="template-card" data-category="education" onclick="selectTemplate('tutorial')">
+                        <div class="template-preview">
+                            <div class="template-placeholder">
+                                <i class="fas fa-graduation-cap"></i>
+                                <span>Tutorial</span>
+                            </div>
+                            <div class="template-overlay">
+                                <button class="use-template-btn">Use Template</button>
+                                <button class="preview-btn">Preview</button>
+                            </div>
+                        </div>
+                        <h3>Tutorial Template</h3>
+                        <p>Step-by-step educational content</p>
+                        <div class="template-meta">
+                            <span class="template-duration">45s</span>
+                            <span class="template-plan">Free</span>
+                        </div>
+                    </div>
+                    
+                    <div class="template-card" data-category="social" onclick="selectTemplate('youtube-intro')">
+                        <div class="template-preview">
+                            <div class="template-placeholder">
+                                <i class="fab fa-youtube"></i>
+                                <span>YouTube Intro</span>
+                            </div>
+                            <div class="template-overlay">
+                                <button class="use-template-btn">Use Template</button>
+                                <button class="preview-btn">Preview</button>
+                            </div>
+                        </div>
+                        <h3>YouTube Channel Intro</h3>
+                        <p>Eye-catching channel introduction</p>
+                        <div class="template-meta">
+                            <span class="template-duration">10s</span>
+                            <span class="template-plan pro">Pro</span>
+                        </div>
+                    </div>
+                    
+                    <div class="template-card" data-category="marketing" onclick="selectTemplate('event-promo')">
+                        <div class="template-preview">
+                            <div class="template-placeholder">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Event Promo</span>
+                            </div>
+                            <div class="template-overlay">
+                                <button class="use-template-btn">Use Template</button>
+                                <button class="preview-btn">Preview</button>
+                            </div>
+                        </div>
+                        <h3>Event Promotion</h3>
+                        <p>Drive attendance with compelling videos</p>
+                        <div class="template-meta">
+                            <span class="template-duration">25s</span>
+                            <span class="template-plan business">Business</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="templates-footer">
+                    <button class="btn-secondary" onclick="viewAllTemplates()">Browse All 1000+ Templates</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Brand Kits Section -->
+        <section id="brand-kits" class="brand-kits">
+            <div class="container">
+                <h2 class="section-title">Brand Kits</h2>
+                <p class="section-subtitle">Keep your brand consistent across all video content</p>
+                <div class="brand-kit-hero">
+                    <div class="brand-kit-content">
+                        <h3>Create Your Brand Kit</h3>
+                        <p>Upload your brand assets once and use them across all your videos. Maintain consistent colors, fonts, and logos automatically.</p>
+                        <ul class="brand-kit-features">
+                            <li><i class="fas fa-check"></i> Upload brand colors and fonts</li>
+                            <li><i class="fas fa-check"></i> Store logos and graphics</li>
+                            <li><i class="fas fa-check"></i> Apply brand elements with one click</li>
+                            <li><i class="fas fa-check"></i> Team-wide brand consistency</li>
+                        </ul>
+                        <button class="btn-primary" onclick="createBrandKit()">
+                            <i class="fas fa-palette"></i>
+                            Create Brand Kit
+                        </button>
+                    </div>
+                    <div class="brand-kit-preview">
+                        <div class="brand-kit-mockup">
+                            <div class="color-palette">
+                                <div class="color-swatch" style="background: #6366f1;"></div>
+                                <div class="color-swatch" style="background: #ec4899;"></div>
+                                <div class="color-swatch" style="background: #10b981;"></div>
+                                <div class="color-swatch" style="background: #f59e0b;"></div>
+                            </div>
+                            <div class="font-preview">
+                                <span class="font-sample">Aa</span>
+                                <span class="font-name">Inter</span>
+                            </div>
+                            <div class="logo-preview">
+                                <div class="logo-placeholder">
+                                    <i class="fas fa-image"></i>
+                                    <span>Your Logo</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="brand-kit-examples">
+                    <h3>Brand Kit Examples</h3>
+                    <div class="examples-grid">
+                        <div class="example-card" onclick="previewBrandKit('tech')">
+                            <div class="example-preview">
+                                <div class="example-colors">
+                                    <span style="background: #2563eb;"></span>
+                                    <span style="background: #1e40af;"></span>
+                                    <span style="background: #64748b;"></span>
+                                </div>
+                                <div class="example-name">Tech Startup</div>
+                            </div>
+                        </div>
+                        <div class="example-card" onclick="previewBrandKit('creative')">
+                            <div class="example-preview">
+                                <div class="example-colors">
+                                    <span style="background: #ec4899;"></span>
+                                    <span style="background: #f59e0b;"></span>
+                                    <span style="background: #8b5cf6;"></span>
+                                </div>
+                                <div class="example-name">Creative Agency</div>
+                            </div>
+                        </div>
+                        <div class="example-card" onclick="previewBrandKit('corporate')">
+                            <div class="example-preview">
+                                <div class="example-colors">
+                                    <span style="background: #1f2937;"></span>
+                                    <span style="background: #374151;"></span>
+                                    <span style="background: #6b7280;"></span>
+                                </div>
+                                <div class="example-name">Corporate</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Team Space Section -->
+        <section id="team-space" class="team-space">
+            <div class="container">
+                <h2 class="section-title">Team Space</h2>
+                <p class="section-subtitle">Collaborate seamlessly with your team on video projects</p>
+                <div class="team-features-grid">
+                    <div class="team-feature">
+                        <div class="feature-icon-large">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h3>Real-time Collaboration</h3>
+                        <p>Work together on projects simultaneously with live editing and instant feedback.</p>
+                    </div>
+                    <div class="team-feature">
+                        <div class="feature-icon-large">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <h3>Comments & Feedback</h3>
+                        <p>Leave timestamped comments and feedback directly on your videos for efficient collaboration.</p>
+                    </div>
+                    <div class="team-feature">
+                        <div class="feature-icon-large">
+                            <i class="fas fa-folder-open"></i>
+                        </div>
+                        <h3>Shared Workspace</h3>
+                        <p>Organize projects in shared folders with role-based permissions and access control.</p>
+                    </div>
+                    <div class="team-feature">
+                        <div class="feature-icon-large">
+                            <i class="fas fa-history"></i>
+                        </div>
+                        <h3>Version Control</h3>
+                        <p>Track changes and revert to previous versions with automatic project history.</p>
+                    </div>
+                </div>
+                <div class="team-dashboard">
+                    <h3>Team Dashboard</h3>
+                    <div class="dashboard-preview">
+                        <div class="team-stats">
+                            <div class="stat-card">
+                                <h4>Active Projects</h4>
+                                <span class="stat-number">12</span>
+                            </div>
+                            <div class="stat-card">
+                                <h4>Team Members</h4>
+                                <span class="stat-number">8</span>
+                            </div>
+                            <div class="stat-card">
+                                <h4>Videos Created</h4>
+                                <span class="stat-number">247</span>
+                            </div>
+                        </div>
+                        <div class="recent-activity">
+                            <h4>Recent Activity</h4>
+                            <div class="activity-item">
+                                <div class="activity-avatar">JD</div>
+                                <div class="activity-details">
+                                    <span class="activity-user">John Doe</span>
+                                    <span class="activity-action">edited "Product Launch Video"</span>
+                                    <span class="activity-time">2 hours ago</span>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-avatar">SM</div>
+                                <div class="activity-details">
+                                    <span class="activity-user">Sarah Miller</span>
+                                    <span class="activity-action">left a comment on "Marketing Campaign"</span>
+                                    <span class="activity-time">4 hours ago</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-primary" onclick="accessTeamSpace()">
+                        <i class="fas fa-users"></i>
+                        Access Team Space
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Resources Section -->
+        <section id="resources" class="resources">
+            <div class="container">
+                <h2 class="section-title">Resources & Learning</h2>
+                <p class="section-subtitle">Everything you need to create amazing videos</p>
+                <div class="resources-grid">
+                    <div class="resource-category">
+                        <div class="category-header">
+                            <i class="fas fa-book"></i>
+                            <h3>Learning Center</h3>
+                        </div>
+                        <div class="resource-list">
+                            <a href="#" onclick="trackResourceAccess('tutorial', 'getting-started')" class="resource-link">
+                                <span>Getting Started Guide</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                            <a href="#" onclick="trackResourceAccess('tutorial', 'advanced-editing')" class="resource-link">
+                                <span>Advanced Editing Tips</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                            <a href="#" onclick="trackResourceAccess('tutorial', 'collaboration')" class="resource-link">
+                                <span>Team Collaboration</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="resource-category">
+                        <div class="category-header">
+                            <i class="fas fa-video"></i>
+                            <h3>Video Tutorials</h3>
+                        </div>
+                        <div class="resource-list">
+                            <a href="#" onclick="trackResourceAccess('video', 'subtitles')" class="resource-link">
+                                <span>How to Add Subtitles</span>
+                                <i class="fas fa-play"></i>
+                            </a>
+                            <a href="#" onclick="trackResourceAccess('video', 'effects')" class="resource-link">
+                                <span>Adding Effects & Filters</span>
+                                <i class="fas fa-play"></i>
+                            </a>
+                            <a href="#" onclick="trackResourceAccess('video', 'export')" class="resource-link">
+                                <span>Exporting Your Video</span>
+                                <i class="fas fa-play"></i>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="resource-category">
+                        <div class="category-header">
+                            <i class="fas fa-download"></i>
+                            <h3>Free Assets</h3>
+                        </div>
+                        <div class="resource-list">
+                            <a href="#" onclick="trackResourceAccess('asset', 'music')" class="resource-link">
+                                <span>Royalty-Free Music</span>
+                                <i class="fas fa-download"></i>
+                            </a>
+                            <a href="#" onclick="trackResourceAccess('asset', 'images')" class="resource-link">
+                                <span>Stock Images</span>
+                                <i class="fas fa-download"></i>
+                            </a>
+                            <a href="#" onclick="trackResourceAccess('asset', 'fonts')" class="resource-link">
+                                <span>Web Fonts</span>
+                                <i class="fas fa-download"></i>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="resource-category">
+                        <div class="category-header">
+                            <i class="fas fa-question-circle"></i>
+                            <h3>Support</h3>
+                        </div>
+                        <div class="resource-list">
+                            <a href="#" onclick="trackResourceAccess('support', 'faq')" class="resource-link">
+                                <span>FAQ</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                            <a href="#" onclick="trackResourceAccess('support', 'contact')" class="resource-link">
+                                <span>Contact Support</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                            <a href="#" onclick="trackResourceAccess('support', 'community')" class="resource-link">
+                                <span>Community Forum</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="help-center">
+                    <div class="help-content">
+                        <h3>Need Help?</h3>
+                        <p>Our support team is here to help you create amazing videos. Get in touch anytime!</p>
+                        <div class="help-actions">
+                            <button class="btn-primary" onclick="openSupportChat()">
+                                <i class="fas fa-comments"></i>
+                                Live Chat
+                            </button>
+                            <button class="btn-secondary" onclick="viewHelpCenter()">
+                                <i class="fas fa-book-open"></i>
+                                Help Center
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="features">
+            <div class="container">
+                <h2 class="section-title">Everything you need to create stunning videos</h2>
+                <div class="features-grid">
+                    <div class="feature-card" onclick="trackFeatureClick('subtitles')">
+                        <div class="feature-icon">
+                            <i class="fas fa-closed-captioning"></i>
+                        </div>
+                        <h3>Auto Subtitles</h3>
+                        <p>Add subtitles automatically with 95%+ accuracy in 100+ languages</p>
+                    </div>
+                    <div class="feature-card" onclick="trackFeatureClick('screen-record')">
+                        <div class="feature-icon">
+                            <i class="fas fa-desktop"></i>
+                        </div>
+                        <h3>Screen Recording</h3>
+                        <p>Record your screen, webcam, and microphone with one click</p>
+                    </div>
+                    <div class="feature-card" onclick="trackFeatureClick('ai-avatars')">
+                        <div class="feature-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <h3>AI Avatars</h3>
+                        <p>Create videos with realistic AI avatars and voiceovers</p>
+                    </div>
+                    <div class="feature-card" onclick="trackFeatureClick('templates')">
+                        <div class="feature-icon">
+                            <i class="fas fa-layer-group"></i>
+                        </div>
+                        <h3>Templates</h3>
+                        <p>Choose from 1000+ professional video templates</p>
+                    </div>
+                    <div class="feature-card" onclick="trackFeatureClick('collaboration')">
+                        <div class="feature-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <h3>Team Collaboration</h3>
+                        <p>Work together with your team on video projects</p>
+                    </div>
+                    <div class="feature-card" onclick="trackFeatureClick('brand-kit')">
+                        <div class="feature-icon">
+                            <i class="fas fa-palette"></i>
+                        </div>
+                        <h3>Brand Kit</h3>
+                        <p>Keep your brand consistent across all videos</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing Section -->
+        <section id="pricing" class="pricing">
+            <div class="container">
+                <h2 class="section-title">Choose the perfect plan for you</h2>
+                <div class="pricing-toggle">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="annual-toggle">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-text">Annual (Save 40%)</span>
+                    </label>
+                </div>
+                <div class="pricing-grid">
+                    <div class="pricing-card">
+                        <div class="plan-header">
+                            <h3>Free</h3>
+                            <div class="price">
+                                <span class="currency">$</span>
+                                <span class="amount">0</span>
+                                <span class="period">/month</span>
+                            </div>
+                        </div>
+                        <ul class="plan-features">
+                            <li><i class="fas fa-check"></i>10 minutes of video per month</li>
+                            <li><i class="fas fa-check"></i>720p export quality</li>
+                            <li><i class="fas fa-check"></i>Basic editing tools</li>
+                            <li><i class="fas fa-times"></i>VEED watermark</li>
+                        </ul>
+                        <button class="btn-plan" onclick="selectPlan('free')">Get Started</button>
+                    </div>
+                    <div class="pricing-card featured">
+                        <div class="plan-badge">Most Popular</div>
+                        <div class="plan-header">
+                            <h3>Pro</h3>
+                            <div class="price">
+                                <span class="currency">$</span>
+                                <span class="amount monthly-price">24</span>
+                                <span class="amount annual-price">14</span>
+                                <span class="period">/month</span>
+                            </div>
+                        </div>
+                        <ul class="plan-features">
+                            <li><i class="fas fa-check"></i>2 hours of video per month</li>
+                            <li><i class="fas fa-check"></i>4K export quality</li>
+                            <li><i class="fas fa-check"></i>All editing tools</li>
+                            <li><i class="fas fa-check"></i>No watermark</li>
+                            <li><i class="fas fa-check"></i>Auto subtitles</li>
+                        </ul>
+                        <button class="btn-plan primary" onclick="selectPlan('pro')">Start Free Trial</button>
+                    </div>
+                    <div class="pricing-card">
+                        <div class="plan-header">
+                            <h3>Business</h3>
+                            <div class="price">
+                                <span class="currency">$</span>
+                                <span class="amount monthly-price">59</span>
+                                <span class="amount annual-price">35</span>
+                                <span class="period">/month</span>
+                            </div>
+                        </div>
+                        <ul class="plan-features">
+                            <li><i class="fas fa-check"></i>10 hours of video per month</li>
+                            <li><i class="fas fa-check"></i>4K export quality</li>
+                            <li><i class="fas fa-check"></i>Team collaboration</li>
+                            <li><i class="fas fa-check"></i>Brand kit</li>
+                            <li><i class="fas fa-check"></i>Priority support</li>
+                        </ul>
+                        <button class="btn-plan" onclick="selectPlan('business')">Start Free Trial</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Product</h4>
+                    <a href="#">Video Editor</a>
+                    <a href="#">Screen Recorder</a>
+                    <a href="#">Subtitles</a>
+                    <a href="#">Templates</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Company</h4>
+                    <a href="#">About</a>
+                    <a href="#">Careers</a>
+                    <a href="#">Press</a>
+                    <a href="#">Contact</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <a href="#">Help Center</a>
+                    <a href="#">Blog</a>
+                    <a href="#">Video Tutorials</a>
+                    <a href="#">API Docs</a>
+                </div>
+                <div class="footer-section">
+                    <h4>Legal</h4>
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Terms of Service</a>
+                    <a href="#">Cookie Policy</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 VEED Ltd. All rights reserved.</p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="#"><i class="fab fa-linkedin"></i></a>
+                    <a href="#"><i class="fab fa-youtube"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modals -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('login-modal')">&times;</span>
+            <h2>Log in to VEED</h2>
+            <form id="login-form">
+                <input type="email" placeholder="Email" required>
+                <input type="password" placeholder="Password" required>
+                <button type="submit" class="btn-primary">Log in</button>
+            </form>
+            <p>Don't have an account? <a href="#" onclick="switchModal('login-modal', 'signup-modal')">Sign up</a></p>
+        </div>
+    </div>
+
+    <div id="signup-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('signup-modal')">&times;</span>
+            <h2>Sign up for VEED</h2>
+            <form id="signup-form">
+                <input type="text" id="signup-name" placeholder="Full Name" required>
+                <input type="email" id="signup-email" placeholder="Email" required>
+                <input type="password" id="signup-password" placeholder="Password" required>
+                <input type="text" id="signup-company" placeholder="Company (optional)">
+                <button type="submit" class="btn-primary">Sign up</button>
+            </form>
+            <p>Already have an account? <a href="#" onclick="switchModal('signup-modal', 'login-modal')">Log in</a></p>
+        </div>
+    </div>
+
+    <!-- Video Editor Modal -->
+    <div id="editor-modal" class="modal editor-modal">
+        <div class="editor-content">
+            <div class="editor-header">
+                <div class="project-title">
+                    <input type="text" value="Untitled Project" id="project-name">
+                    <button class="save-btn" onclick="saveProject()">
+                        <i class="fas fa-save"></i>
+                    </button>
+                </div>
+                <div class="editor-actions">
+                    <button class="btn-secondary" onclick="inviteCollaborator()">
+                        <i class="fas fa-user-plus"></i>
+                        Invite
+                    </button>
+                    <button class="btn-primary" onclick="exportVideo()">
+                        Export
+                    </button>
+                    <span class="close" onclick="closeEditor()">&times;</span>
+                </div>
+            </div>
+            <div class="editor-workspace">
+                <div class="timeline-section">
+                    <div class="video-preview">
+                        <div class="preview-area">
+                            <div class="video-canvas">
+                                <p>Drop video here or click to upload</p>
+                                <button class="upload-btn" onclick="uploadVideoFile()">
+                                    <i class="fas fa-upload"></i>
+                                    Upload Video
+                                </button>
+                            </div>
+                        </div>
+                        <div class="preview-controls">
+                            <button onclick="playVideo()"><i class="fas fa-play"></i></button>
+                            <input type="range" class="timeline-scrubber" min="0" max="100" value="0">
+                            <span class="time-display">00:00 / 00:00</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="tools-panel">
+                    <div class="tool-tabs">
+                        <button class="tool-tab active" onclick="switchTool('media')">Media</button>
+                        <button class="tool-tab" onclick="switchTool('text')">Text</button>
+                        <button class="tool-tab" onclick="switchTool('audio')">Audio</button>
+                        <button class="tool-tab" onclick="switchTool('effects')">Effects</button>
+                        <button class="tool-tab" onclick="switchTool('subtitles')">Subtitles</button>
+                    </div>
+                    <div class="tool-content" id="tool-content">
+                        <div class="media-tools">
+                            <button class="tool-item" onclick="addElement('image')">
+                                <i class="fas fa-image"></i>
+                                Add Image
+                            </button>
+                            <button class="tool-item" onclick="addElement('video')">
+                                <i class="fas fa-video"></i>
+                                Add Video
+                            </button>
+                            <button class="tool-item" onclick="addElement('audio')">
+                                <i class="fas fa-music"></i>
+                                Add Audio
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/analytics.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/editor.js"></script>
+</body>
+</html>
